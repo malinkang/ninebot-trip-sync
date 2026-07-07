@@ -1,4 +1,6 @@
 {
+  "code": 1,
+  "desc": "成功",
   "data": {
     "img": "https://steeldust-image-cdn.ninebot.com/image/thumb/trackthumbnail.png",
     "ec": "130",
@@ -10,7 +12,7 @@
     "show_simple_point_days": 180,
     "start_time": 1783389230,
     "end_time": 1783390364,
-    "used_electricity": 11,
+    "used_electricity": 11.0,
     "speed_nodes": null,
     "tamp_speed_nodes": null,
     "mileages_nodes": null,
@@ -18,7 +20,7 @@
     "engine_power_nodes": null,
     "torque_nodes": null,
     "shaft_speed_nodes": null,
-    "avg_speed": 0,
+    "avg_speed": 0.0,
     "max_shaft_speed": null,
     "avg_shaft_speed": null,
     "avg_engine_power": null,
@@ -26,5 +28,5 @@
     "avg_torque": null,
     "max_torque": null
   },
-  "t": null
+  "t": 1783405680223
 }

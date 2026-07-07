@@ -1,4 +1,4 @@
 date,start_time,end_time,duration_sec,mileage_km,max_speed_kmh,energy_percent,energy_wh,points,raw_json,gpx_wgs84,gpx_gcj02,points_csv
 2026-07-07,2026-07-07 08:11:55,2026-07-07 08:15:01,186,0.7,32.6,0,10,15,trip_2026-07-07_0811_0p7km.json,trip_2026-07-07_0811_0p7km_wgs84.gpx,trip_2026-07-07_0811_0p7km_gcj02.gpx,trip_2026-07-07_0811_0p7km_points_gcj02.csv
 2026-07-07,2026-07-07 08:16:47,2026-07-07 08:20:57,250,1.2,33.9,1,20,25,trip_2026-07-07_0816_1p2km.json,trip_2026-07-07_0816_1p2km_wgs84.gpx,trip_2026-07-07_0816_1p2km_gcj02.gpx,trip_2026-07-07_0816_1p2km_points_gcj02.csv
-2026-07-07,2026-07-07 09:53:50,2026-07-07 10:12:44,1134,9.5,38.9,11,130,166,trip_2026-07-07_0953_9p5km.json,trip_2026-07-07_0953_9p5km_wgs84.gpx,trip_2026-07-07_0953_9p5km_gcj02.gpx,trip_2026-07-07_0953_9p5km_points_gcj02.csv
+2026-07-07,2026-07-07 09:53:50,2026-07-07 10:12:44,1134,9.5,38.9,11.0,130,166,trip_2026-07-07_0953_9p5km.json,trip_2026-07-07_0953_9p5km_wgs84.gpx,trip_2026-07-07_0953_9p5km_gcj02.gpx,trip_2026-07-07_0953_9p5km_points_gcj02.csv
