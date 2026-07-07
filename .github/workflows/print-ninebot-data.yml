@@ -2,8 +2,13 @@ name: Print Ninebot Data
 
 on:
   workflow_dispatch:
+    inputs:
+      month:
+        description: 'Month to fetch, e.g. 202607 or 2026-07. Empty means current Asia/Shanghai month.'
+        required: false
+        default: ''
   schedule:
-    # GitHub Actions cron is UTC. This runs daily at 02:30 UTC / 10:30 Asia-Shanghai.
+    # GitHub Actions cron is UTC. This runs daily at 02:30 UTC / 10:30 Asia/Shanghai.
     - cron: '30 2 * * *'
 
 permissions:
@@ -12,6 +17,19 @@ permissions:
 jobs:
   print-data:
     runs-on: ubuntu-latest
+    env:
+      NINEBOT_ACCESS_TOKEN: ${{ secrets.NINEBOT_ACCESS_TOKEN }}
+      NINEBOT_REFRESH_TOKEN: ${{ secrets.NINEBOT_REFRESH_TOKEN }}
+      NINEBOT_BUSINESS_UID: ${{ secrets.NINEBOT_BUSINESS_UID }}
+      NINEBOT_WNUMBER: ${{ secrets.NINEBOT_WNUMBER }}
+      NINEBOT_VEHICLE_TYPE: ${{ secrets.NINEBOT_VEHICLE_TYPE }}
+      NINEBOT_RN_VERSION: ${{ secrets.NINEBOT_RN_VERSION }}
+      NINEBOT_DEVICE_ID: ${{ secrets.NINEBOT_DEVICE_ID }}
+      NINEBOT_BUSINESS_TYPE: ${{ secrets.NINEBOT_BUSINESS_TYPE }}
+      # GitHub Actions runs on Linux; ninecli only ships macOS wheels, so cloud export uses the pure-Python crypto path.
+      NINEBOT_REFRESH_WITH_NINECLI: "0"
+      NINEBOT_MONTH: ${{ github.event.inputs.month }}
+      NINEBOT_EXPORT_DIR: data/cloud-export
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,13 +39,40 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Print configured secret status
-        env:
-          NINEBOT_WNUMBER: ${{ secrets.NINEBOT_WNUMBER }}
-          NINEBOT_VEHICLE_TYPE: ${{ secrets.NINEBOT_VEHICLE_TYPE }}
-        run: |
-          test -n "$NINEBOT_WNUMBER" && echo "NINEBOT_WNUMBER configured" || echo "NINEBOT_WNUMBER missing"
-          test -n "$NINEBOT_VEHICLE_TYPE" && echo "NINEBOT_VEHICLE_TYPE configured" || echo "NINEBOT_VEHICLE_TYPE missing"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - name: Print exported trip data
-        run: python scripts/print_trips.py --export-dir data/export
+      - name: Print configured secret status
+        run: |
+          for name in \
+            NINEBOT_ACCESS_TOKEN \
+            NINEBOT_REFRESH_TOKEN \
+            NINEBOT_BUSINESS_UID \
+            NINEBOT_WNUMBER \
+            NINEBOT_VEHICLE_TYPE \
+            NINEBOT_RN_VERSION \
+            NINEBOT_DEVICE_ID; do
+            if [ -n "${!name}" ]; then
+              echo "$name configured"
+            else
+              echo "$name missing"
+            fi
+          done
+
+      - name: Fetch all Ninebot cloud trips and details
+        run: |
+          if [ -n "$NINEBOT_MONTH" ]; then
+            python scripts/ninebot_cloud_export.py --month "$NINEBOT_MONTH" --export-dir "$NINEBOT_EXPORT_DIR"
+          else
+            python scripts/ninebot_cloud_export.py --export-dir "$NINEBOT_EXPORT_DIR"
+          fi
+
+      - name: Print fetched trip data
+        run: python scripts/print_trips.py --export-dir "$NINEBOT_EXPORT_DIR"
+
+      - name: Upload export artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ninebot-cloud-export
+          path: data/cloud-export
+          if-no-files-found: error

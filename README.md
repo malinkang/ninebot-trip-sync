@@ -4,36 +4,72 @@ Private automation repo for Ninebot trip exports.
 
 Current scope:
 
-- Print and validate exported trip data in GitHub Actions.
-- Keep a clean sample export under `data/export/`.
-- Reserve Notion sync and live Ninebot fetching for the next step.
+- Fetch Ninebot cloud trip lists and every `travel-info` detail for a month.
+- Export per-trip JSON, GCJ-02 CSV, WGS-84 GPX, GCJ-02 GPX, and a monthly `trips.csv`.
+- Print and validate fetched data in GitHub Actions.
+- Keep Notion sync as the next step.
 
 Discovered Ninebot interfaces are documented in `data/export/README.md`.
 
 ## Run Locally
 
+Install dependencies:
+
 ```bash
 pip install -r requirements.txt
-python scripts/print_trips.py --export-dir data/export
 ```
+
+Fetch all cloud trips and details for the configured month:
+
+```bash
+source .env
+python scripts/ninebot_cloud_export.py --month "$NINEBOT_MONTH" --export-dir data/cloud-export
+python scripts/print_trips.py --export-dir data/cloud-export
+```
+
+A successful run writes:
+
+- `data/cloud-export/raw/travel-list-page-*.json`
+- `data/cloud-export/raw/travel-info-<travel_id>.json`
+- `data/cloud-export/trip_*_wgs84.gpx`
+- `data/cloud-export/trip_*_gcj02.gpx`
+- `data/cloud-export/trip_*_points_gcj02.csv`
+- `data/cloud-export/trips.csv`
+- `data/cloud-export/summary.json`
+
+`data/cloud-export*/` is gitignored because it contains private GPS tracks.
 
 ## GitHub Actions
 
 Workflow: `.github/workflows/print-ninebot-data.yml`
 
-- `workflow_dispatch`: manual run
-- `schedule`: daily at 10:30 Asia/Shanghai
+- `workflow_dispatch`: manual run, optional `month` input such as `202607`.
+- `schedule`: daily at 10:30 Asia/Shanghai.
+- Runs on `ubuntu-latest` with the pure-Python travel crypto implementation.
+- Uploads `data/cloud-export` as the `ninebot-cloud-export` artifact.
 
-## Secrets Configured
+Configured secrets:
 
+- `NINEBOT_ACCESS_TOKEN`
+- `NINEBOT_REFRESH_TOKEN`
+- `NINEBOT_BUSINESS_UID`
 - `NINEBOT_WNUMBER`
 - `NINEBOT_VEHICLE_TYPE`
+- `NINEBOT_RN_VERSION`
+- `NINEBOT_DEVICE_ID`
+- `NINEBOT_BUSINESS_TYPE`
 
-Notion secrets are intentionally not configured yet.
+Note: `NINEBOT_REFRESH_TOKEN` is stored for the refresh implementation, but the
+current Actions path does not call `ninecli` because PyPI only provides macOS
+wheels for it. The Python refresh endpoint/signature still needs to be completed;
+the cloud trip export works with the current access token.
 
 ## Fetch From Phone Locally
 
-Use this when you want to fetch more than the checked-in sample data. It drives the logged-in Ninebot Android app via ADB, lets the app call the encrypted `tokenRequest` API, then extracts decrypted `travel-info` data from logcat/heap and regenerates CSV/GPX/JSON.
+Use this when you want to fetch from the logged-in Android app instead of the
+cloud path. It drives the Ninebot Android app via ADB, lets the app call the
+encrypted `tokenRequest` API, then extracts decrypted `travel-info` data from
+logcat/heap and regenerates CSV/GPX/JSON.
 
 Prerequisites:
 
@@ -77,4 +113,55 @@ After fetching, validate/print:
 
 ```bash
 python scripts/print_trips.py --export-dir data/export
+```
+
+## Raw Travel API Probe
+
+`scripts/ninebot_raw_travel_info.py` is a Python port of the `ninecli` travel
+encryption wrapper. It lets us send the e-bike `vehicle_type`, `rnVersion`,
+`startTime`, `endTime`, and `businessType` fields needed by this account.
+
+List trips for a month:
+
+```bash
+source .env
+python scripts/ninebot_raw_travel_info.py list --month "$NINEBOT_MONTH"
+```
+
+Fetch a detail/trajectory payload after copying `travel_id`, `startTime`, and
+`endTime` from the list output:
+
+```bash
+python scripts/ninebot_raw_travel_info.py detail \
+  --travel-id "<travel_id>" \
+  --start-time 1783389230 \
+  --end-time 1783390364
+```
+
+Required env/secrets:
+
+- `NINEBOT_ACCESS_TOKEN`
+- `NINEBOT_BUSINESS_UID`
+- `NINEBOT_WNUMBER`
+- `NINEBOT_DEVICE_ID`
+- `NINEBOT_VEHICLE_TYPE` (observed e-bike value: `14356`)
+- `NINEBOT_RN_VERSION` (observed Track bundle value: `753`)
+
+## Optional `ninecli` Probe
+
+`hasscc/ninebot` delegates all Ninebot cloud calls to `ninecli==0.1.7`. This is
+useful locally on macOS for reverse engineering and bootstrapping tokens, but it
+is not required by the GitHub Actions export path.
+
+Bootstrap local `ninecli` tokens from the logged-in rooted Android app and probe
+travel APIs:
+
+```bash
+source .env
+python scripts/ninebot_cloud_probe.py \
+  --bootstrap-from-android \
+  --wnumber "$NINEBOT_WNUMBER" \
+  --month "$NINEBOT_MONTH" \
+  --business-line ebike \
+  --detail-first
 ```
