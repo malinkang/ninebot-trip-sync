@@ -39,6 +39,10 @@ jobs:
       NINEBOT_REFRESH_WITH_NINECLI: "0"
       NINEBOT_MONTH: ${{ github.event.inputs.month }}
       NINEBOT_EXPORT_DIR: data/cloud-export
+      NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+      NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+      NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+      NOTION_TITLE_PROPERTY: ${{ secrets.NOTION_TITLE_PROPERTY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -80,6 +84,10 @@ jobs:
 
       - name: Print fetched trip data
         run: python scripts/print_trips.py --export-dir "$NINEBOT_EXPORT_DIR"
+
+      - name: Sync trips to Notion
+        if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATABASE_ID != '' }}
+        run: python scripts/ninebot_notion_sync.py --sync --export-dir "$NINEBOT_EXPORT_DIR"
 
       - name: Upload export artifact
         uses: actions/upload-artifact@v4
