@@ -1,0 +1,9 @@
+.env
+.cache/
+__pycache__/
+*.pyc
+.DS_Store
+# Never commit runtime phone dumps, heap dumps, tokens, or raw app backups.
+ninebot-dump/
+*.hprof
+*.tgz

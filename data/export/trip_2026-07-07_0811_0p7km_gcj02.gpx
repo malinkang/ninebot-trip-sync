@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="ninebot-export" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>Ninebot 2026-07-07_0811 0.7km GCJ02</name><trkseg>
+    <trkpt lat="40.09751560" lon="116.29442710">
+      <ele>27.2</ele>
+      <time>2026-07-07T00:11:55Z</time>
+      <extensions><speed_kmh>0.4</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09736700" lon="116.29397360">
+      <ele>26.6</ele>
+      <time>2026-07-07T00:12:08Z</time>
+      <extensions><speed_kmh>12.7</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09748780" lon="116.29359550">
+      <ele>30.2</ele>
+      <time>2026-07-07T00:12:21Z</time>
+      <extensions><speed_kmh>18.8</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09783110" lon="116.29342650">
+      <ele>33.6</ele>
+      <time>2026-07-07T00:12:34Z</time>
+      <extensions><speed_kmh>19.1</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09821160" lon="116.29330900">
+      <ele>36.6</ele>
+      <time>2026-07-07T00:12:48Z</time>
+      <extensions><speed_kmh>17.8</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09848860" lon="116.29308250">
+      <ele>34.7</ele>
+      <time>2026-07-07T00:13:01Z</time>
+      <extensions><speed_kmh>4.6</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09881510" lon="116.29293680">
+      <ele>38.1</ele>
+      <time>2026-07-07T00:13:14Z</time>
+      <extensions><speed_kmh>24.0</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09928630" lon="116.29283160">
+      <ele>39.0</ele>
+      <time>2026-07-07T00:13:28Z</time>
+      <extensions><speed_kmh>21.0</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09948300" lon="116.29250550">
+      <ele>38.7</ele>
+      <time>2026-07-07T00:13:41Z</time>
+      <extensions><speed_kmh>20.5</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09940660" lon="116.29195660">
+      <ele>35.1</ele>
+      <time>2026-07-07T00:13:54Z</time>
+      <extensions><speed_kmh>28.3</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09934600" lon="116.29143790">
+      <ele>33.3</ele>
+      <time>2026-07-07T00:14:07Z</time>
+      <extensions><speed_kmh>32.6</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09927650" lon="116.29093850">
+      <ele>33.4</ele>
+      <time>2026-07-07T00:14:21Z</time>
+      <extensions><speed_kmh>27.4</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09921850" lon="116.29041800">
+      <ele>30.9</ele>
+      <time>2026-07-07T00:14:34Z</time>
+      <extensions><speed_kmh>25.4</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09915000" lon="116.28991560">
+      <ele>29.6</ele>
+      <time>2026-07-07T00:14:47Z</time>
+      <extensions><speed_kmh>15.1</speed_kmh></extensions>
+    </trkpt>
+    <trkpt lat="40.09915130" lon="116.28983550">
+      <ele>31.2</ele>
+      <time>2026-07-07T00:15:01Z</time>
+      <extensions><speed_kmh>0.0</speed_kmh></extensions>
+    </trkpt>
+  </trkseg></trk>
+</gpx>

@@ -1,0 +1,30 @@
+{
+  "data": {
+    "img": "https://steeldust-image-cdn.ninebot.com/image/thumb/trackthumbnail.png",
+    "ec": "10",
+    "mileages": "0.7",
+    "speed": "32.6",
+    "trail": "116.2944271,40.0975156,0.4,27.2;116.2939736,40.097367,12.7,26.6;116.2935955,40.0974878,18.8,30.2;116.2934265,40.0978311,19.1,33.6;116.293309,40.0982116,17.8,36.6;116.2930825,40.0984886,4.6,34.7;116.2929368,40.0988151,24.0,38.1;116.2928316,40.0992863,21.0,39.0;116.2925055,40.099483,20.5,38.7;116.2919566,40.0994066,28.3,35.1;116.2914379,40.099346,32.6,33.3;116.2909385,40.0992765,27.4,33.4;116.290418,40.0992185,25.4,30.9;116.2899156,40.09915,15.1,29.6;116.2898355,40.0991513,0.0,31.2",
+    "duration": 186,
+    "is_show_simple_point": false,
+    "show_simple_point_days": 180,
+    "start_time": 1783383115,
+    "end_time": 1783383301,
+    "used_electricity": 0,
+    "speed_nodes": null,
+    "tamp_speed_nodes": null,
+    "mileages_nodes": null,
+    "throttle_opening_nodes": null,
+    "engine_power_nodes": null,
+    "torque_nodes": null,
+    "shaft_speed_nodes": null,
+    "avg_speed": 0,
+    "max_shaft_speed": null,
+    "avg_shaft_speed": null,
+    "avg_engine_power": null,
+    "avg_throttle_opening": null,
+    "avg_torque": null,
+    "max_torque": null
+  },
+  "t": null
+}

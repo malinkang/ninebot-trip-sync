@@ -1,0 +1,33 @@
+name: Print Ninebot Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub Actions cron is UTC. This runs daily at 02:30 UTC / 10:30 Asia-Shanghai.
+    - cron: '30 2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  print-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Print configured secret status
+        env:
+          NINEBOT_WNUMBER: ${{ secrets.NINEBOT_WNUMBER }}
+          NINEBOT_VEHICLE_TYPE: ${{ secrets.NINEBOT_VEHICLE_TYPE }}
+        run: |
+          test -n "$NINEBOT_WNUMBER" && echo "NINEBOT_WNUMBER configured" || echo "NINEBOT_WNUMBER missing"
+          test -n "$NINEBOT_VEHICLE_TYPE" && echo "NINEBOT_VEHICLE_TYPE configured" || echo "NINEBOT_VEHICLE_TYPE missing"
+
+      - name: Print exported trip data
+        run: python scripts/print_trips.py --export-dir data/export
