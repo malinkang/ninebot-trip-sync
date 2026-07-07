@@ -73,6 +73,7 @@ def build_args(base: argparse.Namespace, *, page: int | None = None, ride: dict[
         timeout=base.timeout,
         print_http=base.print_http,
         print_request=False,
+        retries=base.retries,
     )
 
 
@@ -220,6 +221,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--platform-ver", default=os.getenv("NINEBOT_PLATFORM_VER", "13 Xiaomi"))
     parser.add_argument("--platform-version-header", default=os.getenv("NINEBOT_PLATFORM_VERSION_HEADER", "13"))
     parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--retries", type=int, default=int(os.getenv("NINEBOT_REQUEST_RETRIES", "5")))
     parser.add_argument("--max-pages", type=int, default=int(os.getenv("NINEBOT_MAX_PAGES", "20")))
     parser.add_argument("--max-details", type=int, default=int(os.getenv("NINEBOT_MAX_DETAILS", "0")), help="0 means no limit")
     parser.add_argument("--sleep", type=float, default=float(os.getenv("NINEBOT_REQUEST_SLEEP", "0.25")))

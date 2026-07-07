@@ -136,16 +136,31 @@ def post_encrypted(args: argparse.Namespace, path: str, payload_json: str) -> di
     }
     if args.print_request:
         print(json.dumps({"payload": json.loads(payload_json), "wrapper_md5": envelope["h"], "wrapper": wrapper}, ensure_ascii=False, indent=2))
-    response = requests.post(
-        args.travel_host.rstrip("/") + path,
-        headers=headers,
-        data=json.dumps(envelope, separators=(",", ":")),
-        timeout=args.timeout,
-    )
-    if args.print_http:
-        print(f"HTTP {response.status_code} {response.url}", file=sys.stderr)
-        print(response.text[:1000], file=sys.stderr)
-    response.raise_for_status()
+    url = args.travel_host.rstrip("/") + path
+    response = None
+    last_error: Exception | None = None
+    for attempt in range(1, int(getattr(args, "retries", 5)) + 1):
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                data=json.dumps(envelope, separators=(",", ":")),
+                timeout=args.timeout,
+            )
+            if args.print_http:
+                print(f"HTTP {response.status_code} {response.url}", file=sys.stderr)
+                print(response.text[:1000], file=sys.stderr)
+            response.raise_for_status()
+            break
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt >= int(getattr(args, "retries", 5)):
+                raise
+            wait = min(2 ** (attempt - 1), 8)
+            print(f"warn: request failed ({exc}); retrying in {wait}s [{attempt}]", file=sys.stderr)
+            time.sleep(wait)
+    if response is None:
+        raise RuntimeError(f"request failed without response: {last_error}")
     parsed = response.json()
     if isinstance(parsed, dict) and isinstance(parsed.get("r"), str):
         plaintext = decrypt_response_body(parsed, key_data)
@@ -182,6 +197,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start-time", type=int)
     parser.add_argument("--end-time", type=int)
     parser.add_argument("--timeout", type=int, default=60)
+    parser.add_argument("--retries", type=int, default=int(env("NINEBOT_REQUEST_RETRIES", "5")))
     parser.add_argument("--print-request", action="store_true")
     parser.add_argument("--print-http", action="store_true")
     args = parser.parse_args()
