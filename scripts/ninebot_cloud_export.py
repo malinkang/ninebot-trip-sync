@@ -111,6 +111,9 @@ def write_trips_csv(export_dir: Path, rows: list[dict[str, Any]]) -> None:
         "gpx_wgs84",
         "gpx_gcj02",
         "points_csv",
+        "points_wgs84_csv",
+        "life_footprint_gcj02_csv",
+        "life_footprint_wgs84_csv",
     ]
     with (export_dir / "trips.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)

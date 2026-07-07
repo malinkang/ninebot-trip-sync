@@ -226,6 +226,25 @@ def dt(ts: int) -> datetime:
     return datetime.fromtimestamp(int(ts), TZ)
 
 
+def haversine_m(lng1: float, lat1: float, lng2: float, lat2: float) -> float:
+    radius = 6371008.8
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lng2 - lng1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * radius * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def bearing_deg(lng1: float, lat1: float, lng2: float, lat2: float) -> float:
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dl = math.radians(lng2 - lng1)
+    y = math.sin(dl) * math.cos(p2)
+    x = math.cos(p1) * math.sin(p2) - math.sin(p1) * math.cos(p2) * math.cos(dl)
+    return (math.degrees(math.atan2(y, x)) + 360) % 360
+
+
 def parse_points(trail: str) -> list[tuple[float, float, float | None, float | None]]:
     points = []
     for part in trail.strip().split(";"):
@@ -237,6 +256,38 @@ def parse_points(trail: str) -> list[tuple[float, float, float | None, float | N
         alt = float(vals[3]) if len(vals) > 3 and vals[3] else None
         points.append((lng, lat, speed, alt))
     return points
+
+
+def write_points_csv(path: Path, points: list[tuple[float, float, float | None, float | None]], coord: str) -> None:
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow([f"lng_{coord}", f"lat_{coord}", "speed_kmh", "altitude_m"])
+        for lng, lat, speed, alt in points:
+            out_lng, out_lat = gcj02_to_wgs84(lng, lat) if coord == "wgs84" else (lng, lat)
+            writer.writerow([out_lng, out_lat, speed, alt])
+
+
+def write_life_footprint_csv(
+    path: Path,
+    points: list[tuple[float, float, float | None, float | None]],
+    start_ts: int,
+    end_ts: int,
+    coord: str,
+) -> None:
+    converted = [(*gcj02_to_wgs84(lng, lat), speed, alt) if coord == "wgs84" else (lng, lat, speed, alt) for lng, lat, speed, alt in points]
+    cumulative = 0.0
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["dataTime", "locType", "longitude", "latitude", "heading", "accuracy", "speed", "distance", "isBackForeground", "stepType", "altitude"])
+        for idx, (lng, lat, speed, alt) in enumerate(converted):
+            if idx > 0:
+                prev_lng, prev_lat = converted[idx - 1][0], converted[idx - 1][1]
+                cumulative += haversine_m(prev_lng, prev_lat, lng, lat)
+                heading = bearing_deg(prev_lng, prev_lat, lng, lat)
+            else:
+                heading = 0.0
+            ts = int(start_ts + (end_ts - start_ts) * idx / max(len(converted) - 1, 1))
+            writer.writerow([ts, 1, f"{lng:.6f}", f"{lat:.6f}", f"{heading:.6f}", "0.000000", speed or 0, f"{cumulative:.6f}", 1, 0, alt or 0])
 
 
 def write_gpx(path: Path, name: str, points: list[tuple[float, float, float | None, float | None]], start_ts: int, end_ts: int, coord: str) -> None:
@@ -350,12 +401,13 @@ def export_detail(item: dict[str, Any], export_dir: Path) -> dict[str, Any]:
     raw_json = export_dir / f"{base}.json"
     raw_json.write_text(json.dumps(item, ensure_ascii=False, indent=2), encoding="utf-8")
     points_csv = export_dir / f"{base}_points_gcj02.csv"
-    with points_csv.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.writer(handle)
-        writer.writerow(["idx", "lng_gcj02", "lat_gcj02", "lng_wgs84", "lat_wgs84", "speed_kmh", "altitude_m"])
-        for idx, (lng, lat, speed, alt) in enumerate(points):
-            wl, wa = gcj02_to_wgs84(lng, lat)
-            writer.writerow([idx, lng, lat, wl, wa, speed, alt])
+    points_wgs84_csv = export_dir / f"{base}_points_wgs84.csv"
+    life_footprint_gcj02_csv = export_dir / f"{base}_life_footprint_gcj02.csv"
+    life_footprint_wgs84_csv = export_dir / f"{base}_life_footprint_wgs84.csv"
+    write_points_csv(points_csv, points, "gcj02")
+    write_points_csv(points_wgs84_csv, points, "wgs84")
+    write_life_footprint_csv(life_footprint_gcj02_csv, points, start_ts, end_ts, "gcj02")
+    write_life_footprint_csv(life_footprint_wgs84_csv, points, start_ts, end_ts, "wgs84")
     gpx_wgs84 = export_dir / f"{base}_wgs84.gpx"
     gpx_gcj02 = export_dir / f"{base}_gcj02.gpx"
     write_gpx(gpx_wgs84, f"Ninebot {label} {mileage}km", points, start_ts, end_ts, "wgs84")
@@ -374,6 +426,9 @@ def export_detail(item: dict[str, Any], export_dir: Path) -> dict[str, Any]:
         "gpx_wgs84": gpx_wgs84.name,
         "gpx_gcj02": gpx_gcj02.name,
         "points_csv": points_csv.name,
+        "points_wgs84_csv": points_wgs84_csv.name,
+        "life_footprint_gcj02_csv": life_footprint_gcj02_csv.name,
+        "life_footprint_wgs84_csv": life_footprint_wgs84_csv.name,
     }
 
 
@@ -387,7 +442,24 @@ def write_trips_csv(export_dir: Path) -> None:
             print(f"warn: skip {json_path}: {exc}", file=sys.stderr)
             continue
         rows[(row["start_time"], row["end_time"], str(row["mileage_km"]))] = row
-    fields = ["date", "start_time", "end_time", "duration_sec", "mileage_km", "max_speed_kmh", "energy_percent", "energy_wh", "points", "raw_json", "gpx_wgs84", "gpx_gcj02", "points_csv"]
+    fields = [
+        "date",
+        "start_time",
+        "end_time",
+        "duration_sec",
+        "mileage_km",
+        "max_speed_kmh",
+        "energy_percent",
+        "energy_wh",
+        "points",
+        "raw_json",
+        "gpx_wgs84",
+        "gpx_gcj02",
+        "points_csv",
+        "points_wgs84_csv",
+        "life_footprint_gcj02_csv",
+        "life_footprint_wgs84_csv",
+    ]
     with (export_dir / "trips.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
         writer.writeheader()
