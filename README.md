@@ -4,9 +4,10 @@ Private automation repo for Ninebot trip exports.
 
 Current scope:
 
-- Fetch Ninebot cloud trip lists and every `travel-info` detail for a month.
+- Fetch Ninebot cloud trip lists and every `travel-info` detail for one month or discovered historical months.
 - Export per-trip JSON, GCJ-02 CSV, WGS-84 GPX, GCJ-02 GPX, and a monthly `trips.csv`.
 - Print and validate fetched data in GitHub Actions.
+- Try a pure-Python Passport token refresh before export when the access token is near expiry.
 - Keep Notion sync as the next step.
 
 Discovered Ninebot interfaces are documented in `data/export/README.md`.
@@ -27,6 +28,14 @@ python scripts/ninebot_cloud_export.py --month "$NINEBOT_MONTH" --export-dir dat
 python scripts/print_trips.py --export-dir data/cloud-export
 ```
 
+Fetch historical months:
+
+```bash
+source .env
+python scripts/ninebot_cloud_export.py --all-months --start-month 202401 --export-dir data/cloud-export
+python scripts/print_trips.py --export-dir data/cloud-export
+```
+
 A successful run writes:
 
 - `data/cloud-export/raw/travel-list-page-*.json`
@@ -43,7 +52,7 @@ A successful run writes:
 
 Workflow: `.github/workflows/print-ninebot-data.yml`
 
-- `workflow_dispatch`: manual run, optional `month` input such as `202607`.
+- `workflow_dispatch`: manual run, optional `month` input such as `202607`; set `all_months=true` and optional `start_month` for historical export.
 - `schedule`: daily at 10:30 Asia/Shanghai.
 - Runs on `ubuntu-latest` with the pure-Python travel crypto implementation.
 - Uploads `data/cloud-export` as the `ninebot-cloud-export` artifact.
@@ -59,10 +68,13 @@ Configured secrets:
 - `NINEBOT_DEVICE_ID`
 - `NINEBOT_BUSINESS_TYPE`
 
-Note: `NINEBOT_REFRESH_TOKEN` is stored for the refresh implementation, but the
-current Actions path does not call `ninecli` because PyPI only provides macOS
-wheels for it. The Python refresh endpoint/signature still needs to be completed;
-the cloud trip export works with the current access token.
+Note: `NINEBOT_REFRESH_TOKEN` is used by `scripts/ninebot_passport.py` for a
+best-effort pure-Python Passport refresh. The reconstructed Passport signature
+is accepted by the server, but this account currently returns `90002 args
+missing`; the exporter logs the refresh failure and continues while the current
+access token is still valid. If a refresh ever succeeds, the new tokens are used
+for that run. Persisting refreshed tokens back to GitHub Secrets still requires
+an additional GitHub token with permission to update repository secrets.
 
 ## Fetch From Phone Locally
 

@@ -7,6 +7,14 @@ on:
         description: 'Month to fetch, e.g. 202607 or 2026-07. Empty means current Asia/Shanghai month.'
         required: false
         default: ''
+      all_months:
+        description: 'Fetch historical months. Set to true to export every discovered month.'
+        required: false
+        default: 'false'
+      start_month:
+        description: 'Optional first historical month, e.g. 202401. Used when all_months=true.'
+        required: false
+        default: ''
   schedule:
     # GitHub Actions cron is UTC. This runs daily at 02:30 UTC / 10:30 Asia/Shanghai.
     - cron: '30 2 * * *'
@@ -26,7 +34,8 @@ jobs:
       NINEBOT_RN_VERSION: ${{ secrets.NINEBOT_RN_VERSION }}
       NINEBOT_DEVICE_ID: ${{ secrets.NINEBOT_DEVICE_ID }}
       NINEBOT_BUSINESS_TYPE: ${{ secrets.NINEBOT_BUSINESS_TYPE }}
-      # GitHub Actions runs on Linux; ninecli only ships macOS wheels, so cloud export uses the pure-Python crypto path.
+      NINEBOT_ALL_MONTHS: ${{ github.event.inputs.all_months == 'true' && '1' || '0' }}
+      NINEBOT_START_MONTH: ${{ github.event.inputs.start_month }}
       NINEBOT_REFRESH_WITH_NINECLI: "0"
       NINEBOT_MONTH: ${{ github.event.inputs.month }}
       NINEBOT_EXPORT_DIR: data/cloud-export
@@ -61,7 +70,9 @@ jobs:
 
       - name: Fetch all Ninebot cloud trips and details
         run: |
-          if [ -n "$NINEBOT_MONTH" ]; then
+          if [ "$NINEBOT_ALL_MONTHS" = "1" ]; then
+            python scripts/ninebot_cloud_export.py --all-months --export-dir "$NINEBOT_EXPORT_DIR"
+          elif [ -n "$NINEBOT_MONTH" ]; then
             python scripts/ninebot_cloud_export.py --month "$NINEBOT_MONTH" --export-dir "$NINEBOT_EXPORT_DIR"
           else
             python scripts/ninebot_cloud_export.py --export-dir "$NINEBOT_EXPORT_DIR"
