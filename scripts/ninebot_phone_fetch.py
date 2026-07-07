@@ -189,24 +189,27 @@ def parse_visible_rows(nodes: list[UINode]) -> list[TripRow]:
     return out
 
 
-def gcj02_to_wgs84(lng: float, lat: float) -> tuple[float, float]:
-    def out_of_china(lng: float, lat: float) -> bool:
-        return not (72.004 <= lng <= 137.8347 and 0.8293 <= lat <= 55.8271)
+def out_of_china(lng: float, lat: float) -> bool:
+    return not (72.004 <= lng <= 137.8347 and 0.8293 <= lat <= 55.8271)
 
-    def transformlat(lng: float, lat: float) -> float:
-        ret = -100.0 + 2.0 * lng + 3.0 * lat + 0.2 * lat * lat + 0.1 * lng * lat + 0.2 * math.sqrt(abs(lng))
-        ret += (20.0 * math.sin(6.0 * lng * math.pi) + 20.0 * math.sin(2.0 * lng * math.pi)) * 2.0 / 3.0
-        ret += (20.0 * math.sin(lat * math.pi) + 40.0 * math.sin(lat / 3.0 * math.pi)) * 2.0 / 3.0
-        ret += (160.0 * math.sin(lat / 12.0 * math.pi) + 320 * math.sin(lat * math.pi / 30.0)) * 2.0 / 3.0
-        return ret
 
-    def transformlng(lng: float, lat: float) -> float:
-        ret = 300.0 + lng + 2.0 * lat + 0.1 * lng * lng + 0.1 * lng * lat + 0.1 * math.sqrt(abs(lng))
-        ret += (20.0 * math.sin(6.0 * lng * math.pi) + 20.0 * math.sin(2.0 * lng * math.pi)) * 2.0 / 3.0
-        ret += (20.0 * math.sin(lng * math.pi) + 40.0 * math.sin(lng / 3.0 * math.pi)) * 2.0 / 3.0
-        ret += (150.0 * math.sin(lng / 12.0 * math.pi) + 300.0 * math.sin(lng / 30.0 * math.pi)) * 2.0 / 3.0
-        return ret
+def transformlat(lng: float, lat: float) -> float:
+    ret = -100.0 + 2.0 * lng + 3.0 * lat + 0.2 * lat * lat + 0.1 * lng * lat + 0.2 * math.sqrt(abs(lng))
+    ret += (20.0 * math.sin(6.0 * lng * math.pi) + 20.0 * math.sin(2.0 * lng * math.pi)) * 2.0 / 3.0
+    ret += (20.0 * math.sin(lat * math.pi) + 40.0 * math.sin(lat / 3.0 * math.pi)) * 2.0 / 3.0
+    ret += (160.0 * math.sin(lat / 12.0 * math.pi) + 320 * math.sin(lat * math.pi / 30.0)) * 2.0 / 3.0
+    return ret
 
+
+def transformlng(lng: float, lat: float) -> float:
+    ret = 300.0 + lng + 2.0 * lat + 0.1 * lng * lng + 0.1 * lng * lat + 0.1 * math.sqrt(abs(lng))
+    ret += (20.0 * math.sin(6.0 * lng * math.pi) + 20.0 * math.sin(2.0 * lng * math.pi)) * 2.0 / 3.0
+    ret += (20.0 * math.sin(lng * math.pi) + 40.0 * math.sin(lng / 3.0 * math.pi)) * 2.0 / 3.0
+    ret += (150.0 * math.sin(lng / 12.0 * math.pi) + 300.0 * math.sin(lng / 30.0 * math.pi)) * 2.0 / 3.0
+    return ret
+
+
+def wgs84_to_gcj02(lng: float, lat: float) -> tuple[float, float]:
     if out_of_china(lng, lat):
         return lng, lat
     a = 6378245.0
@@ -219,6 +222,15 @@ def gcj02_to_wgs84(lng: float, lat: float) -> tuple[float, float]:
     sqrtmagic = math.sqrt(magic)
     dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * math.pi)
     dlng = (dlng * 180.0) / (a / sqrtmagic * math.cos(radlat) * math.pi)
+    return lng + dlng, lat + dlat
+
+
+def gcj02_to_wgs84(lng: float, lat: float) -> tuple[float, float]:
+    if out_of_china(lng, lat):
+        return lng, lat
+    gcj_lng, gcj_lat = wgs84_to_gcj02(lng, lat)
+    dlng = gcj_lng - lng
+    dlat = gcj_lat - lat
     return lng * 2 - (lng + dlng), lat * 2 - (lat + dlat)
 
 
@@ -263,7 +275,7 @@ def write_points_csv(path: Path, points: list[tuple[float, float, float | None, 
         writer = csv.writer(handle)
         writer.writerow([f"lng_{coord}", f"lat_{coord}", "speed_kmh", "altitude_m"])
         for lng, lat, speed, alt in points:
-            out_lng, out_lat = gcj02_to_wgs84(lng, lat) if coord == "wgs84" else (lng, lat)
+            out_lng, out_lat = wgs84_to_gcj02(lng, lat) if coord == "gcj02" else (lng, lat)
             writer.writerow([out_lng, out_lat, speed, alt])
 
 
@@ -274,7 +286,7 @@ def write_life_footprint_csv(
     end_ts: int,
     coord: str,
 ) -> None:
-    converted = [(*gcj02_to_wgs84(lng, lat), speed, alt) if coord == "wgs84" else (lng, lat, speed, alt) for lng, lat, speed, alt in points]
+    converted = [(*wgs84_to_gcj02(lng, lat), speed, alt) if coord == "gcj02" else (lng, lat, speed, alt) for lng, lat, speed, alt in points]
     cumulative = 0.0
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
@@ -297,7 +309,7 @@ def write_gpx(path: Path, name: str, points: list[tuple[float, float, float | No
         f"  <trk><name>{escape(name)}</name><trkseg>",
     ]
     for idx, (lng, lat, speed, alt) in enumerate(points):
-        out_lng, out_lat = gcj02_to_wgs84(lng, lat) if coord == "wgs84" else (lng, lat)
+        out_lng, out_lat = wgs84_to_gcj02(lng, lat) if coord == "gcj02" else (lng, lat)
         ts = int(start_ts + (end_ts - start_ts) * idx / max(len(points) - 1, 1))
         lines.append(f'    <trkpt lat="{out_lat:.8f}" lon="{out_lng:.8f}">')
         if alt is not None:
