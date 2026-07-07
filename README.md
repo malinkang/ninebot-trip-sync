@@ -12,6 +12,34 @@ Current scope:
 
 Discovered Ninebot interfaces are documented in `data/export/README.md`.
 
+## References / Prior Art
+
+This project was built after comparing several Ninebot-related tools and
+libraries:
+
+- [`ninecli`](https://pypi.org/project/ninecli/): the most useful reference for
+  the cloud path. We used it to understand Passport, vehicle, travel list, and
+  travel detail flows, then reimplemented the travel request/response crypto in
+  pure Python for GitHub Actions.
+- [`hasscc/ninebot`](https://github.com/hasscc/ninebot): Home Assistant
+  integration that delegates Ninebot cloud access to `ninecli`; useful for
+  understanding how a higher-level integration consumes `ninecli`.
+- [`hasscc/ninebot#6`](https://github.com/hasscc/ninebot/pull/6) and
+  [`hasscc/ninebot#7`](https://github.com/hasscc/ninebot/pull/7): useful context
+  while checking how token/config handling and `ninecli` integration evolved.
+- [`waistu/Ninebot`](https://github.com/waistu/Ninebot): useful as a historical
+  Ninebot API reference, but not enough for this account's encrypted Track
+  travel APIs.
+- [`ownbee/ninebot-ble`](https://github.com/ownbee/ninebot-ble): useful BLE-side
+  reference for direct vehicle communication; not used for cloud trip history.
+- [`scooterhacking/NinebotCrypto`](https://github.com/scooterhacking/NinebotCrypto):
+  useful for scooter/BLE crypto context; not the same as the cloud travel
+  request crypto implemented here.
+- [`r0ysue/r0capture`](https://github.com/r0ysue/r0capture): useful Android
+  runtime capture option when Reqable/HTTPS proxying is blocked by app-side
+  encryption or certificate pinning; not required by the final GitHub Actions
+  cloud exporter.
+
 ## Run Locally
 
 Install dependencies:
