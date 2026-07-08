@@ -9,6 +9,8 @@ Current scope:
 - Print and validate fetched data in GitHub Actions.
 - Try a pure-Python Passport token refresh before export when the access token is near expiry.
 - Sync exported trips to a Notion database, with WGS84 GPX uploaded as a `GPX` file property.
+- Infer old simplified tracks from repeated full routes before Notion sync, and
+  mark inferred rows in Notion.
 
 Discovered Ninebot interfaces are documented in `data/export/README.md`.
 
@@ -92,6 +94,7 @@ Workflow: `.github/workflows/print-ninebot-data.yml`
 - `schedule`: daily at 12:00 and 22:00 Asia/Shanghai.
 - Runs on `ubuntu-latest` with the pure-Python travel crypto implementation.
 - Syncs fetched trips to Notion when `NOTION_TOKEN` and `NOTION_DATABASE_ID` secrets are configured.
+- Repairs simplified old tracks from repeated full routes before syncing to Notion.
 - Uploads `data/cloud-export` as the `ninebot-cloud-export` artifact.
 
 Configured secrets:

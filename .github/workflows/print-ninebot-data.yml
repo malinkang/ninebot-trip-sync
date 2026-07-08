@@ -86,6 +86,9 @@ jobs:
       - name: Print fetched trip data
         run: python scripts/print_trips.py --export-dir "$NINEBOT_EXPORT_DIR"
 
+      - name: Repair simplified tracks from repeated routes
+        run: python scripts/repair_simplified_tracks.py --export-dir "$NINEBOT_EXPORT_DIR" --apply
+
       - name: Sync trips to Notion
         if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATABASE_ID != '' }}
         run: python scripts/ninebot_notion_sync.py --sync --export-dir "$NINEBOT_EXPORT_DIR"
