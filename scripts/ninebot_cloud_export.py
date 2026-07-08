@@ -291,7 +291,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--env-file", default=pre_args.env_file)
     parser.add_argument("--export-dir", default=os.getenv("NINEBOT_EXPORT_DIR", "data/cloud-export"))
     parser.add_argument("--config-dir", default=os.getenv("NINEBOT_NINECLI_CONFIG", DEFAULT_CONFIG_DIR))
-    parser.add_argument("--month", default=os.getenv("NINEBOT_MONTH", now_cn.strftime("%Y%m")))
+    parser.add_argument("--month", default=os.getenv("NINEBOT_MONTH") or now_cn.strftime("%Y%m"))
     parser.add_argument("--all-months", action="store_true", default=os.getenv("NINEBOT_ALL_MONTHS", "0") == "1")
     parser.add_argument("--start-month", default=os.getenv("NINEBOT_START_MONTH", ""))
     parser.add_argument("--end-month", default=os.getenv("NINEBOT_END_MONTH", ""))
