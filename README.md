@@ -8,7 +8,7 @@ Current scope:
 - Export per-trip JSON, GCJ-02 CSV, WGS-84 GPX, GCJ-02 GPX, and a monthly `trips.csv`.
 - Print and validate fetched data in GitHub Actions.
 - Try a pure-Python Passport token refresh before export when the access token is near expiry.
-- Sync exported trips to a Notion database, with GCJ-02 GPX uploaded as a `GPX` file property.
+- Sync exported trips to a Notion database, with WGS84 GPX uploaded as a `GPX` file property.
 
 Discovered Ninebot interfaces are documented in `data/export/README.md`.
 
@@ -78,12 +78,11 @@ A successful run writes:
 
 Coordinate note:
 
-- For the 2026-07-07 test trip, `*_gcj02.gpx` aligns correctly in gpx.studio;
-  `*_wgs84.gpx` can show a visible offset. Use the `*_gcj02.*` export as the
-  preferred preview/import file for this account unless a target app proves it
-  expects the raw coordinates.
-- The exporter still writes both variants so different map products can be
-  tested without re-fetching private trip data.
+- The Notion/Web pipeline stores WGS84 GPX as the canonical track format. This
+  matches Mapbox/OpenStreetMap-style web maps and avoids source-specific frontend
+  coordinate correction when Strava or other WGS84 sources are added later.
+- The exporter still writes GCJ-02 artifacts for domestic-map apps that expect
+  GCJ-02, but those files are not uploaded to Notion by default.
 
 ## GitHub Actions
 
@@ -115,7 +114,7 @@ Notion secrets:
 - `NOTION_TITLE_PROPERTY`
 
 The Notion sync writes trip metadata as database properties and uploads only the
-GCJ-02 GPX as a JSON-wrapped file in the `GPX` property. It does not attach files
+WGS84 GPX as a JSON-wrapped file in the `GPX` property. It does not attach files
 to the page body.
 
 Note: `NINEBOT_REFRESH_TOKEN` is used by `scripts/ninebot_passport.py` for a

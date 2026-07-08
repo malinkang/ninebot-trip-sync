@@ -8,8 +8,8 @@ Sync exported Ninebot trips into a Notion database with the official
 - Reads `data/cloud-export/trips.csv` by default.
 - Creates or updates one Notion database row per trip.
 - Writes trip metadata into database properties.
-- Uploads only the GCJ-02 GPX file as a JSON-wrapped file named
-  `*_gcj02.gpx.json` into the `GPX` database property.
+- Uploads only the WGS84 GPX file as a JSON-wrapped file named
+  `*_wgs84.gpx.json` into the `GPX` database property.
 - Clears old page-body blocks during forced updates so files are not duplicated
   in the page article body.
 

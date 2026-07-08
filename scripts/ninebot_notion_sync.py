@@ -62,12 +62,12 @@ class Trip:
     def stable_key(self) -> str:
         return f"{self.start_time}|{self.end_time}|{self.mileage_km}"
 
-    def gpx_gcj02_name(self) -> str:
-        name = self.row.get("gpx_gcj02", "")
+    def gpx_wgs84_name(self) -> str:
+        name = self.row.get("gpx_wgs84", "")
         return name if name and (self.export_dir / name).exists() else ""
 
     def file_names(self) -> list[str]:
-        name = self.gpx_gcj02_name()
+        name = self.gpx_wgs84_name()
         return [name] if name else []
 
 
@@ -304,7 +304,7 @@ def clear_children(notion: Client, page_id: str) -> None:
 
 
 def upload_trip_gpx(notion: Client, trip: Trip) -> tuple[str, str] | None:
-    name = trip.gpx_gcj02_name()
+    name = trip.gpx_wgs84_name()
     if not name:
         return None
     upload_id = upload_file(notion, trip.export_dir / name)

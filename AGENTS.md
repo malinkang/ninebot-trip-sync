@@ -9,7 +9,7 @@ Current expected path:
 1. Fetch Ninebot cloud trip list and `travel-info` details.
 2. Export private local artifacts under `data/cloud-export/`.
 3. Sync each trip to the Notion child database `Ninebot Trips`.
-4. Upload only the GCJ-02 GPX as a JSON-wrapped file in the Notion `GPX` database property.
+4. Upload only the WGS84 GPX as a JSON-wrapped file in the Notion `GPX` database property.
 5. Keep GitHub Actions scheduled sync working.
 
 ## Sensitive Data Rules
@@ -45,21 +45,21 @@ printf '%s' "$NOTION_TOKEN" | gh secret set NOTION_TOKEN
 - Use `data_sources.query` for querying rows.
 - Create pages with parent `{"data_source_id": "..."}`.
 - The database must include a `GPX` files property.
-- Upload only `*_gcj02.gpx` after wrapping it as JSON named `*_gcj02.gpx.json`.
+- Upload only `*_wgs84.gpx` after wrapping it as JSON named `*_wgs84.gpx.json`.
 - Do not attach GPX/CSV/JSON files to the page body.
 - On forced resync, clear old page body blocks left by older sync versions.
 - A successful Notion sync should have every trip row with:
   - title in `Name`
   - unique `Stable Key`
   - content hash in `Digest`
-  - GCJ-02 JSON-wrapped GPX in `GPX`
+  - WGS84 JSON-wrapped GPX in `GPX`
   - no sync-created page body attachments
 
 ## Coordinate Rules
 
-- For this account, the `*_gcj02.gpx` export is the preferred file for preview/import.
-- The Notion `GPX` property should store the `*_gcj02.gpx.json` wrapper only.
-- Keep generating both WGS-84 and GCJ-02 artifacts when export scripts already do so, but do not upload both to Notion.
+- The Notion/Web pipeline should store WGS84 GPX as the canonical track format.
+- The Notion `GPX` property should store the `*_wgs84.gpx.json` wrapper only.
+- Keep generating both WGS-84 and GCJ-02 artifacts when export scripts already do so, but do not upload both to Notion. GCJ-02 remains useful for domestic-map apps.
 
 ## Token Update Workflow
 
@@ -187,7 +187,7 @@ Before claiming the automation is fixed or complete, verify the relevant scope:
 - GitHub Actions workflow succeeds after push when workflow behavior changed.
 - Notion database `Ninebot Trips` exists under the configured parent page.
 - All expected trip rows have a `GPX` file property.
-- All `GPX` filenames end with `_gcj02.gpx.json`.
+- All `GPX` filenames end with `_wgs84.gpx.json`.
 - No old sync-created body attachments remain when a forced cleanup was requested.
 - No secrets or private GPS artifacts are staged or committed.
 
