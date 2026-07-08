@@ -90,7 +90,7 @@ Coordinate note:
 Workflow: `.github/workflows/print-ninebot-data.yml`
 
 - `workflow_dispatch`: manual run, optional `month` input such as `202607`; set `all_months=true` and optional `start_month` for historical export.
-- `schedule`: daily at 10:30 Asia/Shanghai.
+- `schedule`: daily at 12:00 and 22:00 Asia/Shanghai.
 - Runs on `ubuntu-latest` with the pure-Python travel crypto implementation.
 - Syncs fetched trips to Notion when `NOTION_TOKEN` and `NOTION_DATABASE_ID` secrets are configured.
 - Uploads `data/cloud-export` as the `ninebot-cloud-export` artifact.

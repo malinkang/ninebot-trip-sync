@@ -16,8 +16,9 @@ on:
         required: false
         default: ''
   schedule:
-    # GitHub Actions cron is UTC. This runs daily at 02:30 UTC / 10:30 Asia/Shanghai.
-    - cron: '30 2 * * *'
+    # GitHub Actions cron is UTC. These run daily at 12:00 and 22:00 Asia/Shanghai.
+    - cron: '0 4 * * *'
+    - cron: '0 14 * * *'
 
 permissions:
   contents: read
