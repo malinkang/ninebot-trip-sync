@@ -11,11 +11,12 @@ import sys
 import tempfile
 import time
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from ninebot_phone_fetch import export_detail
+from ninebot_phone_fetch import dt, export_detail
 from ninebot_passport import PassportConfig, PassportRefreshError, refresh_tokens
 from ninebot_raw_travel_info import (
     DEFAULT_CLIENT_VER,
@@ -250,6 +251,37 @@ def iter_months(start_month: str, end_month: str) -> list[str]:
     return months
 
 
+def read_stable_keys(path: str) -> set[str]:
+    if not path:
+        return set()
+    key_path = Path(path)
+    if not key_path.exists():
+        return set()
+    return {line.strip() for line in key_path.read_text(encoding="utf-8").splitlines() if line.strip()}
+
+
+def normalize_mileage(value: Any) -> str:
+    text = str(value).strip()
+    try:
+        return format(Decimal(text).normalize(), "f")
+    except (InvalidOperation, ValueError):
+        return text
+
+
+def stable_key_from_ride(ride: dict[str, Any]) -> str | None:
+    try:
+        start_ts = int(ride["start_time"])
+        end_ts = int(ride["end_time"])
+    except Exception:
+        return None
+    mileage = ride.get("mileages")
+    if mileage is None or mileage == "":
+        return None
+    start = dt(start_ts).strftime("%Y-%m-%d %H:%M:%S")
+    end = dt(end_ts).strftime("%Y-%m-%d %H:%M:%S")
+    return f"{start}|{end}|{normalize_mileage(mileage)}"
+
+
 def discover_history_months(args: argparse.Namespace) -> list[str]:
     end_month = normalize_month(args.end_month or args.month)
     if args.start_month:
@@ -313,6 +345,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--retries", type=int, default=int(os.getenv("NINEBOT_REQUEST_RETRIES", "5")))
     parser.add_argument("--max-pages", type=int, default=int(os.getenv("NINEBOT_MAX_PAGES", "20")))
     parser.add_argument("--max-details", type=int, default=int(os.getenv("NINEBOT_MAX_DETAILS", "0")), help="0 means no limit")
+    parser.add_argument("--skip-stable-keys-file", default=os.getenv("NINEBOT_SKIP_STABLE_KEYS_FILE", ""))
     parser.add_argument("--sleep", type=float, default=float(os.getenv("NINEBOT_REQUEST_SLEEP", "0.25")))
     parser.add_argument("--print-http", action="store_true")
     parser.add_argument("--refresh-with-ninecli", action="store_true", default=os.getenv("NINEBOT_REFRESH_WITH_NINECLI", "0") == "1")
@@ -368,8 +401,22 @@ def export_month(args: argparse.Namespace, export_dir: Path) -> dict[str, Any]:
         time.sleep(args.sleep)
 
     rides = list(rides_by_id.values())
-    detail_limit = len(rides) if args.max_details <= 0 else min(args.max_details, len(rides))
-    for idx, ride in enumerate(rides[:detail_limit], start=1):
+    skipped_existing = 0
+    skip_stable_keys = read_stable_keys(getattr(args, "skip_stable_keys_file", ""))
+    if skip_stable_keys:
+        filtered_rides = []
+        for ride in rides:
+            stable_key = stable_key_from_ride(ride)
+            if stable_key and stable_key in skip_stable_keys:
+                skipped_existing += 1
+                continue
+            filtered_rides.append(ride)
+        rides_for_details = filtered_rides
+    else:
+        rides_for_details = rides
+
+    detail_limit = len(rides_for_details) if args.max_details <= 0 else min(args.max_details, len(rides_for_details))
+    for idx, ride in enumerate(rides_for_details[:detail_limit], start=1):
         try:
             response = fetch_detail(args, ride)
             write_json(raw_dir / f"travel-info-{ride['travel_id']}.json", response)
@@ -392,6 +439,7 @@ def export_month(args: argparse.Namespace, export_dir: Path) -> dict[str, Any]:
         "list_count": len(rides),
         "expected_count": total_expected,
         "detail_count": len(rows),
+        "skipped_existing_details": skipped_existing,
         "total_mileage_km": round(sum(float(row.get("mileage_km") or 0) for row in rows), 3),
         "generated_at": datetime.now(TZ).isoformat(),
     }
@@ -406,6 +454,7 @@ def write_all_months_summary(export_dir: Path, summaries: list[dict[str, Any]]) 
         "month_count": len(summaries),
         "list_count": sum(int(item.get("list_count") or 0) for item in summaries),
         "detail_count": sum(int(item.get("detail_count") or 0) for item in summaries),
+        "skipped_existing_details": sum(int(item.get("skipped_existing_details") or 0) for item in summaries),
         "total_mileage_km": round(sum(float(item.get("total_mileage_km") or 0) for item in summaries), 3),
         "generated_at": datetime.now(TZ).isoformat(),
     }

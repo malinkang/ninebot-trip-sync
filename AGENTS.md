@@ -96,6 +96,10 @@ Workflow file: `.github/workflows/print-ninebot-data.yml`.
 
 - Manual trigger: `workflow_dispatch`.
 - Scheduled trigger: daily at 12:00 and 22:00 Asia/Shanghai.
+- Scheduled and default single-month runs are incremental: query existing Notion
+  `Stable Key` values first, then skip Ninebot detail/GPX fetches for trips
+  already synced. Use manual `incremental=false` to force a single-month
+  re-fetch. Historical `all_months=true` remains full-history.
 - GitHub cron is UTC, so the expected cron entries are:
 
 ```yaml

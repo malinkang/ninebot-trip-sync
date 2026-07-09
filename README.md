@@ -75,9 +75,12 @@ Coordinate note:
 
 Workflow: `.github/workflows/print-ninebot-data.yml`
 
-- `workflow_dispatch`: manual run, optional `month` input such as `202607`; set `all_months=true` and optional `start_month` for historical export.
+- `workflow_dispatch`: manual run, optional `month` input such as `202607`; set `all_months=true` and optional `start_month` for historical export. Use `incremental=false` to force a single-month re-fetch.
 - `schedule`: daily at 12:00 and 22:00 Asia/Shanghai.
 - Runs on `ubuntu-latest` with the pure-Python travel crypto implementation.
+- Scheduled and default single-month runs first read existing Notion `Stable Key`
+  values, then skip detail/GPX fetching for trips already synced to Notion.
+  Historical `all_months=true` runs still fetch full history.
 - Syncs fetched trips to Notion when `NOTION_TOKEN` and `NOTION_DATABASE_ID` secrets are configured.
 - Repairs simplified old tracks from repeated full routes before syncing to Notion.
 - Uploads `data/cloud-export` as the `ninebot-cloud-export` artifact.

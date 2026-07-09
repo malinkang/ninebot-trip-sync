@@ -15,6 +15,10 @@ on:
         description: 'Optional first historical month, e.g. 202401. Used when all_months=true.'
         required: false
         default: ''
+      incremental:
+        description: 'Skip trips already synced to Notion when fetching a single month.'
+        required: false
+        default: 'true'
   schedule:
     # GitHub Actions cron is UTC. These run daily at 12:00 and 22:00 Asia/Shanghai.
     - cron: '0 4 * * *'
@@ -37,6 +41,8 @@ jobs:
       NINEBOT_BUSINESS_TYPE: ${{ secrets.NINEBOT_BUSINESS_TYPE }}
       NINEBOT_ALL_MONTHS: ${{ github.event.inputs.all_months == 'true' && '1' || '0' }}
       NINEBOT_START_MONTH: ${{ github.event.inputs.start_month }}
+      NINEBOT_INCREMENTAL: ${{ github.event.inputs.all_months == 'true' && '0' || github.event.inputs.incremental == 'false' && '0' || '1' }}
+      NINEBOT_SKIP_STABLE_KEYS_FILE: data/cloud-export/existing-stable-keys.txt
       NINEBOT_REFRESH_WITH_NINECLI: "0"
       NINEBOT_MONTH: ${{ github.event.inputs.month }}
       NINEBOT_EXPORT_DIR: data/cloud-export
@@ -72,6 +78,18 @@ jobs:
               echo "$name missing"
             fi
           done
+
+      - name: Load existing Notion trip keys
+        if: ${{ env.NINEBOT_INCREMENTAL == '1' && env.NOTION_TOKEN != '' && env.NOTION_DATABASE_ID != '' }}
+        run: |
+          if [ -n "${NINEBOT_MONTH}" ]; then
+            python scripts/notion_existing_keys.py \
+              --month "${NINEBOT_MONTH}" \
+              --output "${NINEBOT_SKIP_STABLE_KEYS_FILE}"
+          else
+            python scripts/notion_existing_keys.py \
+              --output "${NINEBOT_SKIP_STABLE_KEYS_FILE}"
+          fi
 
       - name: Fetch all Ninebot cloud trips and details
         run: |
