@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Export existing Ninebot Notion Stable Key values for an optional month."""
+"""Export existing Ninebot Notion Stable Key values and sync range state."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -19,6 +20,10 @@ TZ = timezone(timedelta(hours=8))
 
 def normalize_month(value: str) -> str:
     return value.replace("-", "").strip()
+
+
+def month_from_date_text(value: str) -> str:
+    return value[:7].replace("-", "")
 
 
 def month_bounds(month: str) -> tuple[str, str]:
@@ -40,6 +45,13 @@ def stable_key_from_page(page: dict[str, Any]) -> str | None:
         return None
     text = texts[0].get("plain_text") or ""
     return text.strip() or None
+
+
+def start_time_from_page(page: dict[str, Any]) -> str | None:
+    prop = page.get("properties", {}).get("Start Time", {})
+    date_value = prop.get("date") or {}
+    start = date_value.get("start")
+    return start.strip() if isinstance(start, str) and start.strip() else None
 
 
 def query_existing_keys(notion: Client, data_source_id: str, month: str = "") -> set[str]:
@@ -70,9 +82,38 @@ def query_existing_keys(notion: Client, data_source_id: str, month: str = "") ->
     return keys
 
 
+def query_latest_start_time(notion: Client, data_source_id: str) -> str | None:
+    cursor: str | None = None
+    while True:
+        kwargs: dict[str, Any] = {
+            "data_source_id": data_source_id,
+            "page_size": 100,
+            "sorts": [{"property": "Start Time", "direction": "descending"}],
+        }
+        if cursor:
+            kwargs["start_cursor"] = cursor
+        result = notion.data_sources.query(**kwargs)
+        for page in result.get("results", []):
+            start = start_time_from_page(page)
+            if start:
+                return start
+        if not result.get("has_more"):
+            return None
+        cursor = result.get("next_cursor")
+
+
 def write_keys(path: Path, keys: Iterable[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(sorted(keys)) + ("\n" if keys else ""), encoding="utf-8")
+
+
+def append_github_env(values: dict[str, str], env_path: str | None = None) -> None:
+    path = env_path or os.getenv("GITHUB_ENV")
+    if not path:
+        return
+    with Path(path).open("a", encoding="utf-8") as handle:
+        for key, value in values.items():
+            handle.write(f"{key}={value}\n")
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,8 +122,6 @@ def parse_args() -> argparse.Namespace:
     pre_args, _ = pre.parse_known_args()
     load_env_file(Path(pre_args.env_file))
 
-    import os
-
     now_cn = datetime.now(TZ)
     parser = argparse.ArgumentParser(description="Write existing Ninebot Notion Stable Key values to a text file.")
     parser.add_argument("--env-file", default=pre_args.env_file)
@@ -90,6 +129,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--database-id", default=os.getenv("NOTION_DATABASE_ID", ""))
     parser.add_argument("--month", default=os.getenv("NINEBOT_MONTH") or now_cn.strftime("%Y%m"))
     parser.add_argument("--all", action="store_true", help="Query all keys instead of filtering to --month.")
+    parser.add_argument("--from-latest-start", action="store_true", help="Set sync start month from latest Notion Start Time, or today minus --fallback-days when empty.")
+    parser.add_argument("--fallback-days", type=int, default=int(os.getenv("NINEBOT_EMPTY_NOTION_FALLBACK_DAYS", "180")))
+    parser.add_argument("--github-env", default=os.getenv("GITHUB_ENV", ""), help="Append computed NINEBOT_SYNC_* values to this env file.")
     parser.add_argument("--output", default="data/cloud-export/existing-stable-keys.txt")
     parser.add_argument("--timeout-ms", type=int, default=int(os.getenv("NOTION_TIMEOUT_MS", "120000")))
     return parser.parse_args()
@@ -104,10 +146,44 @@ def main() -> int:
 
     notion = Client(options={"auth": args.token, "timeout_ms": args.timeout_ms})
     data_source_id = resolve_data_source_id(notion, format_id(args.database_id))
-    keys = query_existing_keys(notion, data_source_id, "" if args.all else args.month)
+    latest_start_time = ""
+    from_fallback = False
+    sync_start_month = normalize_month(args.month)
+
+    if args.from_latest_start:
+        latest_start_time = query_latest_start_time(notion, data_source_id) or ""
+        if latest_start_time:
+            sync_start_month = month_from_date_text(latest_start_time)
+        else:
+            fallback_date = datetime.now(TZ) - timedelta(days=args.fallback_days)
+            sync_start_month = fallback_date.strftime("%Y%m")
+            from_fallback = True
+        append_github_env(
+            {
+                "NINEBOT_SYNC_START_MONTH": sync_start_month,
+                "NINEBOT_SYNC_LATEST_START_TIME": latest_start_time,
+                "NINEBOT_SYNC_FROM_FALLBACK": "1" if from_fallback else "0",
+            },
+            args.github_env,
+        )
+
+    keys = query_existing_keys(notion, data_source_id, "" if args.all or args.from_latest_start else args.month)
     write_keys(Path(args.output), keys)
-    scope = "all" if args.all else normalize_month(args.month)
-    print(json.dumps({"scope": scope, "existing_keys": len(keys), "output": args.output}, ensure_ascii=False))
+    scope = "all" if args.all or args.from_latest_start else normalize_month(args.month)
+    print(
+        json.dumps(
+            {
+                "scope": scope,
+                "existing_keys": len(keys),
+                "output": args.output,
+                "sync_start_month": sync_start_month if args.from_latest_start else "",
+                "latest_start_time": latest_start_time,
+                "from_fallback": from_fallback,
+                "fallback_days": args.fallback_days,
+            },
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

@@ -131,8 +131,6 @@ def database_schema() -> dict[str, Any]:
         "Energy Percent": {"number": {"format": "percent"}},
         "Energy Wh": {"number": {"format": "number"}},
         "Points": {"number": {"format": "number"}},
-        "Inferred Track": {"checkbox": {}},
-        "Inferred From Start Time": {"date": {}},
         "Digest": {"rich_text": {}},
         "GPX": {"files": {}},
         "Synced At": {"date": {}},
@@ -257,8 +255,6 @@ def trip_properties(trip: Trip, digest: str | None = None, gpx_upload: tuple[str
         "Energy Percent": number_prop(trip.row.get("energy_percent")),
         "Energy Wh": number_prop(trip.row.get("energy_wh")),
         "Points": {"number": parse_int(trip.row.get("points"))} if parse_int(trip.row.get("points")) is not None else None,
-        "Inferred Track": {"checkbox": trip.row.get("inferred_track") == "1"},
-        "Inferred From Start Time": date_prop(trip.row.get("inferred_from_start_time")),
     }
     props.update({key: value for key, value in optional.items() if value is not None})
     return props

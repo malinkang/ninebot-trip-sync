@@ -16,7 +16,7 @@ on:
         required: false
         default: ''
       incremental:
-        description: 'Skip trips already synced to Notion when fetching a single month.'
+        description: 'Use Notion latest Start Time as sync start month and skip already synced trips.'
         required: false
         default: 'true'
   schedule:
@@ -79,7 +79,7 @@ jobs:
             fi
           done
 
-      - name: Load existing Notion trip keys
+      - name: Load Notion sync state
         if: ${{ env.NINEBOT_INCREMENTAL == '1' && env.NOTION_TOKEN != '' && env.NOTION_DATABASE_ID != '' }}
         run: |
           if [ -n "${NINEBOT_MONTH}" ]; then
@@ -88,24 +88,28 @@ jobs:
               --output "${NINEBOT_SKIP_STABLE_KEYS_FILE}"
           else
             python scripts/notion_existing_keys.py \
+              --from-latest-start \
               --output "${NINEBOT_SKIP_STABLE_KEYS_FILE}"
           fi
 
       - name: Fetch all Ninebot cloud trips and details
         run: |
           if [ "$NINEBOT_ALL_MONTHS" = "1" ]; then
-            python scripts/ninebot_cloud_export.py --all-months --export-dir "$NINEBOT_EXPORT_DIR"
+            if [ -n "$NINEBOT_START_MONTH" ]; then
+              python scripts/ninebot_cloud_export.py --all-months --start-month "$NINEBOT_START_MONTH" --export-dir "$NINEBOT_EXPORT_DIR"
+            else
+              python scripts/ninebot_cloud_export.py --all-months --export-dir "$NINEBOT_EXPORT_DIR"
+            fi
           elif [ -n "$NINEBOT_MONTH" ]; then
             python scripts/ninebot_cloud_export.py --month "$NINEBOT_MONTH" --export-dir "$NINEBOT_EXPORT_DIR"
+          elif [ "$NINEBOT_INCREMENTAL" = "1" ] && [ -n "$NINEBOT_SYNC_START_MONTH" ]; then
+            python scripts/ninebot_cloud_export.py --all-months --start-month "$NINEBOT_SYNC_START_MONTH" --export-dir "$NINEBOT_EXPORT_DIR"
           else
             python scripts/ninebot_cloud_export.py --export-dir "$NINEBOT_EXPORT_DIR"
           fi
 
       - name: Print fetched trip data
         run: python scripts/print_trips.py --export-dir "$NINEBOT_EXPORT_DIR"
-
-      - name: Repair simplified tracks from repeated routes
-        run: python scripts/repair_simplified_tracks.py --export-dir "$NINEBOT_EXPORT_DIR" --apply
 
       - name: Sync trips to Notion
         if: ${{ env.NOTION_TOKEN != '' && env.NOTION_DATABASE_ID != '' }}

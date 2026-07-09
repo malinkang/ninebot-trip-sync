@@ -30,6 +30,7 @@ printf '%s' "$NOTION_TOKEN" | gh secret set NOTION_TOKEN
 
 - `.github/workflows/print-ninebot-data.yml`: scheduled/manual cloud export and Notion sync workflow.
 - `scripts/ninebot_cloud_export.py`: cloud trip list/detail export entrypoint.
+- `scripts/notion_existing_keys.py`: reads Notion sync state and existing `Stable Key` values for incremental sync.
 - `scripts/ninebot_raw_travel_info.py`: encrypted Ninebot travel API client.
 - `scripts/ninebot_passport.py`: best-effort Passport refresh support.
 - `scripts/ninebot_phone_fetch.py`: local Android app fallback export helper.
@@ -60,6 +61,9 @@ printf '%s' "$NOTION_TOKEN" | gh secret set NOTION_TOKEN
 - The Notion/Web pipeline should store WGS84 GPX as the canonical track format.
 - The Notion `GPX` property should store the `*_wgs84.gpx.json` wrapper only.
 - Keep generating both WGS-84 and GCJ-02 artifacts when export scripts already do so, but do not upload both to Notion. GCJ-02 remains useful for domestic-map apps.
+- Do not infer, repair, or fabricate GPS points for old Ninebot records. Ninebot
+  cloud only returns complete track points for roughly the latest 180 days; older
+  records may contain only simplified start/end points.
 
 ## Token Update Workflow
 
@@ -96,10 +100,17 @@ Workflow file: `.github/workflows/print-ninebot-data.yml`.
 
 - Manual trigger: `workflow_dispatch`.
 - Scheduled trigger: daily at 12:00 and 22:00 Asia/Shanghai.
-- Scheduled and default single-month runs are incremental: query existing Notion
-  `Stable Key` values first, then skip Ninebot detail/GPX fetches for trips
-  already synced. Use manual `incremental=false` to force a single-month
-  re-fetch. Historical `all_months=true` remains full-history.
+- Scheduled/default incremental runs query the latest Notion `Start Time`, use
+  that month as the export start month, then fetch forward to the current month.
+- If Notion has no rows, scheduled/default incremental runs start from
+  `today - 180 days`, because Ninebot only keeps complete trajectories for
+  roughly 180 days.
+- Existing Notion `Stable Key` values are loaded before export so already synced
+  rows skip Ninebot detail/GPX fetches. Manual `incremental=false` forces the
+  legacy current-month behavior. Historical `all_months=true` remains
+  full-history.
+- Export/sync order should remain old-to-new: process months ascending and keep
+  each `trips.csv` sorted by `start_time`.
 - GitHub cron is UTC, so the expected cron entries are:
 
 ```yaml

@@ -9,8 +9,6 @@ Current scope:
 - Print and validate fetched data in GitHub Actions.
 - Try a pure-Python Passport token refresh before export when the access token is near expiry.
 - Sync exported trips to a Notion database, with WGS84 GPX uploaded as a `GPX` file property.
-- Infer old simplified tracks from repeated full routes before Notion sync, and
-  mark inferred rows in Notion.
 
 Discovered Ninebot interfaces are documented in `data/export/README.md`.
 
@@ -71,18 +69,36 @@ Coordinate note:
 - The exporter still writes GCJ-02 artifacts for domestic-map apps that expect
   GCJ-02, but those files are not uploaded to Notion by default.
 
+## Ninebot 180-Day Track Limit
+
+Ninebot cloud currently only returns complete trajectory points for roughly the
+latest 180 days. Older travel records may still appear in the trip list, but the
+detail payload can degrade to simplified points such as only start and end
+coordinates. This is a Ninebot service/app limitation, not a GPX conversion
+issue.
+
+This repo does not infer, repair, or fabricate missing GPS points. If Notion is
+empty, the scheduled sync starts from `today - 180 days` and fetches forward to
+the current month so the first import avoids known-retention-broken tracks. If
+Notion already has data, the sync starts from the month of the latest Notion
+`Start Time` and continues through the current month.
+
 ## GitHub Actions
 
 Workflow: `.github/workflows/print-ninebot-data.yml`
 
-- `workflow_dispatch`: manual run, optional `month` input such as `202607`; set `all_months=true` and optional `start_month` for historical export. Use `incremental=false` to force a single-month re-fetch.
+- `workflow_dispatch`: manual run, optional `month` input such as `202607`; set `all_months=true` and optional `start_month` for historical export. Use `incremental=false` to force the legacy current-month fetch behavior.
 - `schedule`: daily at 12:00 and 22:00 Asia/Shanghai.
 - Runs on `ubuntu-latest` with the pure-Python travel crypto implementation.
-- Scheduled and default single-month runs first read existing Notion `Stable Key`
-  values, then skip detail/GPX fetching for trips already synced to Notion.
-  Historical `all_months=true` runs still fetch full history.
+- Scheduled/default incremental runs read the latest Notion `Start Time`, derive
+  its month, fetch from that month through the current month, and skip
+  detail/GPX fetching for rows whose `Stable Key` already exists in Notion.
+- When Notion is empty, scheduled/default incremental runs start from
+  `today - 180 days` and fetch forward to the current month.
+- Export and sync are ordered old-to-new: months are processed ascending, and
+  each `trips.csv` is sorted by `start_time`.
+- Historical `all_months=true` runs still fetch the requested full history.
 - Syncs fetched trips to Notion when `NOTION_TOKEN` and `NOTION_DATABASE_ID` secrets are configured.
-- Repairs simplified old tracks from repeated full routes before syncing to Notion.
 - Uploads `data/cloud-export` as the `ninebot-cloud-export` artifact.
 
 Configured secrets:
