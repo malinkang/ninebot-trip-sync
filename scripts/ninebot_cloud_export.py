@@ -385,6 +385,9 @@ def export_month(args: argparse.Namespace, export_dir: Path) -> dict[str, Any]:
     for page in range(1, args.max_pages + 1):
         response = fetch_page(args, page)
         write_json(raw_dir / f"travel-list-page-{page}.json", response)
+        # Debug: print raw response structure (excluding ride details) to diagnose API errors
+        debug_resp = {k: v for k, v in response.items() if k != "list"} if isinstance(response, dict) else response
+        print(f"DEBUG travel-list response (page {page}): {json.dumps(debug_resp, ensure_ascii=False)[:2000]}", file=sys.stderr)
         data = unwrap_data(response)
         rides = data.get("list") if isinstance(data.get("list"), list) else []
         if total_expected is None and data.get("times") is not None:
