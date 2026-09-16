@@ -220,7 +220,7 @@ def best_effort_refresh_with_passport(base: argparse.Namespace) -> None:
     )
     try:
         refreshed = refresh_tokens(base.access_token, base.refresh_token, config)
-    except PassportRefreshError as exc:
+    except Exception as exc:
         print(f"token refresh skipped/failed: {exc}", file=sys.stderr)
         return
     base.access_token = refreshed["access_token"]

@@ -112,14 +112,20 @@ def refresh_tokens(access_token: str, refresh_token: str, config: PassportConfig
         "Sign": sign,
         **config.common_headers,
     }
-    response = requests.post(
-        config.base_url.rstrip("/") + path,
-        headers=headers,
-        data=json.dumps(body, separators=(",", ":")),
-        timeout=config.timeout,
-    )
-    response.raise_for_status()
-    payload = response.json()
+    try:
+        response = requests.post(
+            config.base_url.rstrip("/") + path,
+            headers=headers,
+            data=json.dumps(body, separators=(",", ":")),
+            timeout=config.timeout,
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise PassportRefreshError(f"passport refresh request failed: {exc}") from exc
+    try:
+        payload = response.json()
+    except Exception as exc:
+        raise PassportRefreshError(f"passport refresh response is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise PassportRefreshError("passport refresh returned a non-object response")
     if not _success_code(payload):

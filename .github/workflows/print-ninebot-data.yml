@@ -19,6 +19,10 @@ on:
         description: 'Use Notion latest Start Time as sync start month and skip already synced trips.'
         required: false
         default: 'true'
+      disable_refresh:
+        description: 'Disable passport token refresh'
+        required: false
+        default: 'false'
   schedule:
     # GitHub Actions cron is UTC. These run daily at 12:00 and 22:00 Asia/Shanghai.
     - cron: '0 4 * * *'
@@ -42,6 +46,7 @@ jobs:
       NINEBOT_ALL_MONTHS: ${{ github.event.inputs.all_months == 'true' && '1' || '0' }}
       NINEBOT_START_MONTH: ${{ github.event.inputs.start_month }}
       NINEBOT_INCREMENTAL: ${{ github.event.inputs.all_months == 'true' && '0' || github.event.inputs.incremental == 'false' && '0' || '1' }}
+      NINEBOT_DISABLE_REFRESH: ${{ github.event.inputs.disable_refresh == 'true' && '1' || '0' }}
       NINEBOT_SKIP_STABLE_KEYS_FILE: data/cloud-export/existing-stable-keys.txt
       NINEBOT_REFRESH_WITH_NINECLI: "0"
       NINEBOT_MONTH: ${{ github.event.inputs.month }}
