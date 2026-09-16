@@ -286,8 +286,8 @@ def check_api_response(response: Any, context: str) -> None:
     if not isinstance(response, dict):
         return
     code = response.get("code")
-    if code is not None and str(code) not in {"0", "90000"}:
-        desc = response.get("desc") or response.get("msg") or response.get("message")
+    desc = str(response.get("desc") or response.get("msg") or response.get("message") or "")
+    if code is not None and str(code) not in {"0", "1", "90000"} and desc not in {"成功", "success"}:
         if str(code) == "401900":
             raise RuntimeError(
                 f"Ninebot access token expired ({context}): code={code}, desc={desc!r}. "
