@@ -282,6 +282,20 @@ def stable_key_from_ride(ride: dict[str, Any]) -> str | None:
     return f"{start}|{end}|{normalize_mileage(mileage)}"
 
 
+def check_api_response(response: Any, context: str) -> None:
+    if not isinstance(response, dict):
+        return
+    code = response.get("code")
+    if code is not None and str(code) not in {"0", "90000"}:
+        desc = response.get("desc") or response.get("msg") or response.get("message")
+        if str(code) == "401900":
+            raise RuntimeError(
+                f"Ninebot access token expired ({context}): code={code}, desc={desc!r}. "
+                "Please update NINEBOT_ACCESS_TOKEN secret."
+            )
+        raise RuntimeError(f"Ninebot API error ({context}): code={code}, desc={desc!r}")
+
+
 def discover_history_months(args: argparse.Namespace) -> list[str]:
     end_month = normalize_month(args.end_month or args.month)
     if args.start_month:
@@ -293,6 +307,7 @@ def discover_history_months(args: argparse.Namespace) -> list[str]:
         probe_args = argparse.Namespace(**vars(args))
         probe_args.month = cur
         response = fetch_page(probe_args, 1)
+        check_api_response(response, f"probe month {cur}")
         data = unwrap_data(response)
         rides = data.get("list") if isinstance(data.get("list"), list) else []
         total = data.get("times")
@@ -388,6 +403,7 @@ def export_month(args: argparse.Namespace, export_dir: Path) -> dict[str, Any]:
         # Debug: print raw response structure (excluding ride details) to diagnose API errors
         debug_resp = {k: v for k, v in response.items() if k != "list"} if isinstance(response, dict) else response
         print(f"DEBUG travel-list response (page {page}): {json.dumps(debug_resp, ensure_ascii=False)[:2000]}", file=sys.stderr)
+        check_api_response(response, f"travel-list page {page}")
         data = unwrap_data(response)
         rides = data.get("list") if isinstance(data.get("list"), list) else []
         if total_expected is None and data.get("times") is not None:
@@ -423,6 +439,7 @@ def export_month(args: argparse.Namespace, export_dir: Path) -> dict[str, Any]:
         try:
             response = fetch_detail(args, ride)
             write_json(raw_dir / f"travel-info-{ride['travel_id']}.json", response)
+            check_api_response(response, f"travel-detail {ride.get('travel_id')}")
             detail = unwrap_data(response)
             if not detail.get("start_time"):
                 detail["start_time"] = ride.get("start_time")
